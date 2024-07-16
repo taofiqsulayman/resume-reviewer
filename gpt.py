@@ -24,11 +24,11 @@ def get_gpt_response(data: str):
                     },
                     "years_of_experience": {
                         "type": "number",
-                        "description": "Extract total years of experience",
+                        "description": "Extract total years of experience and take the dates into account",
                     },
-                    "previous_companies": {
+                    "previous_experience": {
                         "type": "string",
-                        "description": "Extract list of previous companies",
+                        "description": "Extract list of previous companies or experience",
                     },
                     "education": {
                         "type": "string",

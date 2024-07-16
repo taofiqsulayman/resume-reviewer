@@ -87,7 +87,7 @@ if files:
                 f"**Years of Experience:** {resume_data.get('years_of_experience')}"
             )
             st.markdown(
-                f"**Previous Companies:** {resume_data.get('previous_companies')}"
+                f"**Previous Experience:** {resume_data.get('previous_experience')}"
             )
             st.markdown(f"**Education:** {resume_data.get('education')}")
             st.markdown(f"**Relevant Skills:** {resume_data.get('relevant_skills')}")
