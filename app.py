@@ -41,7 +41,7 @@ st.markdown(
 with st.form(key="resume_form"):
     files = st.file_uploader(
         "Add the resume(s) in PDF or Excel format:",
-        type=["pdf", "xlsx"],
+        type=["pdf", "csv"],
         accept_multiple_files=True,
     )
     # openai_api_key = st.text_input(
@@ -63,15 +63,15 @@ if files:
             extracted_texts.append(text)
         elif (
             file.type
-            == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            == "text/csv"
         ):
             import pandas as pd
 
-            df = pd.read_excel(file)
+            df = pd.read_csv(file)
             for index, row in df.iterrows():
-                extracted_texts.append(
-                    "\n".join(str(value) for value in row if pd.notnull(value))
-                )
+                name = row['Name']
+                resume = row['Resume']
+                extracted_texts.append(f"{name}\n{resume}")
 
     responses = []
     for text in extracted_texts:
