@@ -6,8 +6,12 @@ import os
 from dotenv import load_dotenv
 import openai
 from gpt import get_gpt_response
+import pytesseract
+from PIL import Image
+import io
+import pandas as pd
+import json
 
-# Load environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -20,8 +24,6 @@ def extract_resume_data(data: str) -> dict | None:
         return result
 
     if reviews and isinstance(result, str):
-        import json
-
         try:
             json_result = json.loads(result)
             return json_result
@@ -30,6 +32,11 @@ def extract_resume_data(data: str) -> dict | None:
             print(e)
     return None
 
+def extract_text_from_images(images) -> str:
+    text = ""
+    for img in images:
+        text += pytesseract.image_to_string(img)
+    return text
 
 # Streamlit configuration
 st.set_page_config(page_title="Resume Reviewer", page_icon="")
@@ -60,13 +67,15 @@ if files:
             text = ""
             for page in pdf:
                 text += page.get_text()
+                images = page.get_images(full=True)
+                for img in images:
+                    xref = img[0]
+                    base_image = pdf.extract_image(xref)
+                    image_bytes = base_image["image"]
+                    image = Image.open(io.BytesIO(image_bytes))
+                    text += extract_text_from_images([image])
             extracted_texts.append(text)
-        elif (
-            file.type
-            == "text/csv"
-        ):
-            import pandas as pd
-
+        elif file.type == "text/csv":
             df = pd.read_csv(file)
             for index, row in df.iterrows():
                 name = row['Name']
