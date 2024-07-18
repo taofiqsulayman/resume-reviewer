@@ -6,13 +6,17 @@ import os
 from dotenv import load_dotenv
 import openai
 from gpt import get_gpt_response
+import pandas as pd
+import csv
+
 
 # Load environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def extract_resume_data(data: str) -> dict | None:
-    gpt_response = get_gpt_response(data)
+
+def extract_data(data: str, instructions: list) -> dict | None:
+    gpt_response = get_gpt_response(data, instructions)
     response_message = gpt_response.choices[0].message
     reviews = response_message.function_call
     result = reviews.arguments
@@ -32,24 +36,65 @@ def extract_resume_data(data: str) -> dict | None:
 
 
 # Streamlit configuration
-st.set_page_config(page_title="Resume Reviewer", page_icon="")
-st.title("Resume Reviewer")
+st.set_page_config(page_title="Data Extraction App", page_icon="📜")
+st.title("Data Extraction Application")
 st.markdown(
-    "Use this application to review resumes and extract detailed information from them."
+    "This application extracts information from documents using OpenAI's GPT-3 model."
 )
 
+# Initialize session state for instructions
+if "instructions" not in st.session_state:
+    st.session_state["instructions"] = []
+
+# Section for adding extraction instructions
+st.subheader("Extraction Instructions")
+st.markdown(
+    "Add instructions for extracting information from the document. The title should be unique."
+)
+
+with st.form(key="instruction_form"):
+    title = st.text_input("Title")
+    data_type = st.selectbox("Data Type", ["string", "number"])
+    description = st.text_area("Description")
+    add_button = st.form_submit_button("Add")
+
+    if add_button and title and data_type and description:
+        st.session_state["instructions"].append(
+            {"title": title, "data_type": data_type, "description": description}
+        )
+
+# Define a CSS style for the card
+card_style = """
+<style>
+.card {
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    transition: 0.3s;
+    padding: 10px;
+    margin-bottom: 10px; /* Space between cards */
+}
+.card:hover {
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.2);
+}
+</style>
+"""
+
+st.markdown(card_style, unsafe_allow_html=True)
+
+if st.session_state["instructions"]:
+    st.subheader("Added Instructions")
+    for instruction in st.session_state["instructions"]:
+        st.markdown(
+            f"<div class='card' style='display: flex; align-items: center;'><div style='flex-grow: 1;' title='{instruction['description']} ({instruction['data_type']})'>{instruction['title']}</div></div>",
+            unsafe_allow_html=True,
+        )
+
+# File uploader and submit button
 with st.form(key="resume_form"):
     files = st.file_uploader(
-        "Add the resume(s) in PDF or Excel format:",
+        "Add file(s) in PDF or CSV format:",
         type=["pdf", "csv"],
         accept_multiple_files=True,
     )
-    # openai_api_key = st.text_input(
-    #     "OpenAI API Key",
-    #     type="password",
-    #     value=os.getenv("OPENAI_API_KEY", ""),
-    #     help="Add the OpenAI API key here.",
-    # )
     submitted = st.form_submit_button("Submit")
 
 if files:
@@ -61,37 +106,44 @@ if files:
             for page in pdf:
                 text += page.get_text()
             extracted_texts.append(text)
-        elif (
-            file.type
-            == "text/csv"
-        ):
-            import pandas as pd
-
+        elif file.type == "text/csv":
             df = pd.read_csv(file)
             for index, row in df.iterrows():
-                name = row['Name']
-                resume = row['Resume']
+                name = row["Name"]
+                resume = row["Resume"]
                 extracted_texts.append(f"{name}\n{resume}")
 
     responses = []
     for text in extracted_texts:
-        resume_data = extract_resume_data(text)
-        responses.append(resume_data)
+        file_data = extract_data(text, st.session_state["instructions"])
+        responses.append(file_data)
 
-    for idx, resume_data in enumerate(responses):
-        st.markdown(f"### Resume {idx + 1} Review")
-        if resume_data:
-            st.markdown(f"**Name:** {resume_data.get('name')}")
-            st.markdown(f"**Email:** {resume_data.get('email')}")
-            st.markdown(
-                f"**Years of Experience:** {resume_data.get('years_of_experience')}"
-            )
-            st.markdown(
-                f"**Previous Experience:** {resume_data.get('previous_experience')}"
-            )
-            st.markdown(f"**Education:** {resume_data.get('education')}")
-            st.markdown(f"**Relevant Skills:** {resume_data.get('relevant_skills')}")
-            st.markdown(f"**Suggested Roles:** {resume_data.get('suggested_roles')}")
-            st.markdown(f"**Summary:** {resume_data.get('summary')}")
-        else:
-            st.markdown("No data extracted")
+    # Convert responses to CSV
+    csv_data = []
+    for idx, data in enumerate(responses):
+        if data:
+            row = {}
+            for instruction in st.session_state["instructions"]:
+                title = instruction["title"]
+                formatted_title = title.lower().replace(" ", "_")
+                row[title] = data.get(formatted_title)
+            csv_data.append(row)
+
+    # Display summary of the CSV data
+    if csv_data:
+        st.subheader("CSV Summary")
+        st.write(pd.DataFrame(csv_data))
+
+    # Download CSV file
+    # if csv_data:
+    #     with st.form(key="download_form"):
+    #         download_button = st.form_submit_button("Download CSV")
+
+    #     if download_button:
+    #         csv_file = "data.csv"
+    #         df = pd.DataFrame(csv_data)
+    #         df.to_csv(csv_file, index=False)
+
+    #         st.download_button("Download CSV", csv_file)
+    else:
+        st.markdown("No data extracted")
