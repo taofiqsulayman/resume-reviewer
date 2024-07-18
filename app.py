@@ -34,6 +34,7 @@ def extract_data(data: str, instructions: list) -> dict | None:
             print(e)
     return None
 
+
 def extract_text_from_images(images) -> str:
     text = ""
     for img in images:
