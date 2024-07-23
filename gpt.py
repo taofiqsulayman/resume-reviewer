@@ -35,7 +35,7 @@ def get_gpt_response(data: str, instructions: list):
     function_descriptions = [
         {
             "name": "extract_data",
-            "description": "Extract information from file.",
+            "description": "Extract information from file. Return 'not found' if field is not found.",
             "parameters": {
                 "type": "object",
                 "properties": function_properties,
@@ -44,9 +44,9 @@ def get_gpt_response(data: str, instructions: list):
         }
     ]
 
-
     prompt = f"""You are a professional Data Analyst / Data Miner and your job is to extract detailed information from documents.
             The document is as follows: {data}
+            If a particular field is not found in the document, please return 'not found' for that field.
             """
 
     messages = [{"role": "user", "content": prompt}]
