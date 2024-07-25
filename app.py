@@ -6,10 +6,17 @@ import os
 from dotenv import load_dotenv
 import openai
 from gpt import get_gpt_response
+from gpt4all import GPT4All
 
 # Load environment variables
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+
+model = GPT4All("Meta-Llama-3-8B-Instruct.Q4_0.gguf") # downloads / loads a 4.66GB LLM
+with model.chat_session():
+    print(model.generate("How can I run LLMs efficiently on my laptop?", max_tokens=1024))
 
 def extract_resume_data(data: str) -> dict | None:
     gpt_response = get_gpt_response(data)
